@@ -1,0 +1,58 @@
+{
+  "name": "naver-datalab-mcp-server",
+  "version": "1.0.0", 
+  "description": "네이버 데이터랩 API MCP 서버 구현",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "naver-datalab-mcp-server": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec ts-node --esm ./src/index.ts", 
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "lint": "eslint src/**/*.ts",
+    "test": "jest",
+    "prepare": "npm run build",
+    "postinstall": "chmod +x ./dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "naver",
+    "datalab",
+    "analytics",
+    "modelcontextprotocol"
+  ],
+  "author": "Hero",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.1.0", 
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.0",
+    "rimraf": "^5.0.10",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

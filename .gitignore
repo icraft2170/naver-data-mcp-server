@@ -1,0 +1,88 @@
+# MCP 관련 파일
+/jars/
+/logs/
+/runtime/
+/temp/
+/bin/
+/conf/
+/docs/
+/eclipse/
+/reobf/
+/src/minecraft_server/
+/src/minecraft/
+
+# 컴파일된 파일
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE 관련 파일
+.idea/
+*.iml
+*.iws
+.settings/
+.classpath
+.project
+
+# 운영체제 관련 파일
+.DS_Store
+Thumbs.db
+
+# 임시 파일
+*.tmp
+*.bak
+*.swp
+*~
+
+# 로그 파일
+*.log
+
+# 기타 MCP 관련 파일
+/CHANGELOG
+/cleanup.bat
+/cleanup.sh
+/decompile.bat
+/decompile.sh
+/recompile.bat
+/recompile.sh
+/reobfuscate.bat
+/reobfuscate.sh
+/startclient.bat
+/startclient.sh
+/startserver.bat
+/startserver.sh
+/updatemcp.bat
+/updatemcp.sh
+
+# Gradle 관련 (만약 사용하는 경우)
+.gradle/
+build/
+
+# Node.js 관련
+node_modules/
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/ 
