@@ -19,6 +19,7 @@ import {
   FormattedNaverShoppingTrendResult
 } from './types/naverTypes.js';
 
+
 // MCP SDK의 타입 정의
 interface RequestHandlerExtra {
   [key: string]: unknown;
@@ -145,21 +146,26 @@ Parameters:
 - timeUnit (required): Time unit for data aggregation ("date", "week", or "month")
 - keywordGroups (required): Array of keyword groups to compare (max 5 groups)
   - groupName: Name of the keyword group
-  - keywords: Array of keywords to track (max 20 keywords per group)
+  - keywords: Array of keywords to track (max 20 keywords per group, each keyword must be 5 characters or less)
 - device (optional): Device type filter ("pc" for desktop, "mo" for mobile, or empty for all)
 - gender (optional): Gender filter ("f" for female, "m" for male, or empty for all)
-- ages (optional): Array of age group codes from "1" to "11"`,
+- age (optional): Array of age group codes from "1" to "11"
+
+Note: Each keyword in the keywords array must be 5 characters or less. For example, "운동화" is allowed but "하이브리드 운동화" is not.`,
         {
             ...dateRangeSchema,
             keywordGroups: z.array(
                 z.object({
                     groupName: z.string().describe("Name of the keyword group"),
-                    keywords: z.array(z.string().min(1).max(20)).describe("Array of keywords (max 20) to track in this group")
+                    keywords: z.array(z.string().min(1).max(5).refine(
+                        (val) => val.length <= 5,
+                        { message: "검색어는 최대 5자까지만 가능합니다." }
+                    )).describe("Array of keywords (max 20) to track in this group, each keyword must be 5 characters or less")
                 })
             ).min(1).max(5).describe("Array of keyword groups (max 5) to compare trends"),
             device: deviceSchema.describe("Device type filter: 'pc' for desktop, 'mo' for mobile, or empty for all"),
             gender: genderSchema.describe("Gender filter: 'f' for female, 'm' for male, or empty for all"),
-            ages: agesSchema.describe("Age group filter: Array of age codes from '1' to '11'")
+            age: agesSchema.describe("Age group filter: Array of age codes from '1' to '11'")
         },
         async (params: NaverSearchTrendParams, _extra: RequestHandlerExtra): Promise<McpResponse> => {
             try {

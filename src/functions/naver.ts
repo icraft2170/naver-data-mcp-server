@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import { 
   NaverSearchTrendParams, 
   NaverSearchTrendResponse,
@@ -29,9 +30,9 @@ const processRequestParams = <T extends NaverApiRequestParams>(params: T): Recor
     timeUnit: params.timeUnit,
     ...(params.device && { device: params.device }),
     ...(params.gender && { gender: params.gender }),
-    ...(params.ages && params.ages.length > 0 && { ages: params.ages }),
+    ...(params.age && params.age.length > 0 && { age: params.age }),
     ...Object.entries(params)
-      .filter(([key]) => !['startDate', 'endDate', 'timeUnit', 'device', 'gender', 'ages'].includes(key))
+      .filter(([key]) => !['startDate', 'endDate', 'timeUnit', 'device', 'gender', 'age'].includes(key))
       .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
   };
 };

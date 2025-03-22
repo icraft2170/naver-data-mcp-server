@@ -46,7 +46,7 @@ export type AgeGroup = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10
 export interface FilterOptions {
   device?: Device;
   gender?: Gender;
-  ages?: AgeGroup[];
+  age?: AgeGroup[];
 }
 
 // 공통 기간 파라미터 타입
