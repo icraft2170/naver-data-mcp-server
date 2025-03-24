@@ -13,7 +13,6 @@ import {
 } from './functions/naver.js';
 import { searchSimilarCategories } from './services/categorySearch.js';
 import { initDatabase, generateAllCategoryEmbeddings } from './services/categorySearch.js';
-import { initData } from './db/initData.js';
 import { 
     NaverSearchTrendParams, 
     NaverShoppingCategoryTrendParams, 
@@ -22,16 +21,16 @@ import {
     FormattedNaverShoppingTrendResult, 
     CategorySearchResponse,
     Category
-} from './types/naverTypes.js';
+} from './types/naverTypes';
 
-// Node.js 버전 체크
+// Node 버전 체크
 const requiredVersion = 18;
 const currentVersion = parseInt(process.version.slice(1).split('.')[0]);
 
 if (currentVersion < requiredVersion) {
     console.error(JSON.stringify({
         type: 'warning',
-        message: `권장 Node.js 버전은 18.0.0 이상입니다. 현재 버전: ${process.version}. 일부 기능이 제대로 작동하지 않을 수 있습니다.`
+        message: `권장 Node 버전은 18.0.0 이상입니다. 현재 버전: ${process.version}. 일부 기능이 제대로 작동하지 않을 수 있습니다.`
     }));
     // 경고만 표시하고 계속 실행
 }
@@ -222,7 +221,7 @@ async function main() {
         try {
             const express = await import('express');
             expressApp = express.default();
-            expressApp.use(express.default.json());
+            expressApp.use(express.json());
 
             // 모든 도구 등록
             // 이 부분은 아래 server.tool() 호출 이후에 정의된 핸들러를 사용하기 위한 저장소입니다.
@@ -253,7 +252,7 @@ async function main() {
                         
                         // 도구 이름으로 해당 도구 찾기
                         if (!toolHandlers.has(name)) {
-                            return res.json(createErrorResponse(id, -32601, `도구 '${name}'를 찾을 수 없습니다.`));
+                            return res.status(404).json(createErrorResponse(id, -32601, `도구 '${name}'를 찾을 수 없습니다.`));
                         }
 
                         try {
@@ -661,5 +660,5 @@ main().catch((err) => {
         message: '서버 실행 중 오류 발생',
         error: err.message
     }));
-    process.exit(1);
+    process.exit(1); 
 }); 

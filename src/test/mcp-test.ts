@@ -33,6 +33,7 @@ async function callMcpTool(toolName: string, params: any) {
 
         // 응답 처리
         const responseData = await response.json();
+
         
         if (responseData.error) {
             throw new Error(`MCP 도구 호출 오류: ${responseData.error.message}`);

@@ -9,7 +9,7 @@ import {
   FormattedNaverShoppingTrendResult,
   NaverApiRequestParams,
   PeriodRatioData
-} from '../types/naverTypes.js';
+} from '../types/naverTypes';
 
 // 네이버 API 호출을 위한 공통 헤더
 const getNaverApiHeaders = () => ({

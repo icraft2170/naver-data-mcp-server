@@ -1,16 +1,17 @@
-import betterSqlite3, { Database } from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { pipeline } from '@xenova/transformers';
 import fs from 'fs';
-import { Category } from '../types/naverTypes.js';
+import lowdb from 'lowdb';
+import FileSync from 'lowdb/adapters/FileSync.js';
+import { Category } from '../types/naverTypes';
 
 // ESM에서 __dirname 사용을 위한 workaround
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // 데이터베이스 경로 설정
-const DB_PATH = join(__dirname, '../../data/categories.db');
+const DB_PATH = join(__dirname, '../../data/categorieson');
 
 // 데이터베이스 디렉토리 생성
 const dbDir = dirname(DB_PATH);
@@ -20,6 +21,16 @@ if (!fs.existsSync(dbDir)) {
 
 // 임베딩 모델 캐시 디렉토리 설정
 const CACHE_DIR = join(__dirname, '../../.cache/transformers');
+
+// 데이터베이스 스키마 정의
+interface DbSchema {
+  categories: Category[];
+  category_embeddings: Array<{
+    cat_id: string;
+    embedding: number[];
+    created_at: string;
+  }>;
+}
 
 // 임베딩 파이프라인 초기화
 let embeddingPipeline: any = null;
@@ -36,9 +47,9 @@ export async function initEmbeddingPipeline() {
 }
 
 // 데이터베이스 초기화
-let db: Database | null = null;
+let db: lowdb.LowdbSync<DbSchema> | null = null;
 
-export function initDatabase(): Promise<Database> {
+export function initDatabase(): Promise<lowdb.LowdbSync<DbSchema>> {
     return new Promise((resolve, reject) => {
         try {
             if (!db) {
@@ -47,39 +58,21 @@ export function initDatabase(): Promise<Database> {
                     message: '데이터베이스 연결을 초기화합니다...'
                 }));
                 
-                db = new betterSqlite3(DB_PATH);
+                // 데이터베이스 어댑터 생성
+                const adapter = new FileSync<DbSchema>(DB_PATH);
                 
-                // categories 테이블 생성
-                db.exec(`
-                    CREATE TABLE IF NOT EXISTS categories (
-                        cat_id TEXT PRIMARY KEY,
-                        major_category TEXT NOT NULL,
-                        middle_category TEXT,
-                        minor_category TEXT,
-                        detailed_category TEXT,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                `);
-
-                // category_embeddings 테이블 생성
-                db.exec(`
-                    CREATE TABLE IF NOT EXISTS category_embeddings (
-                        cat_id TEXT PRIMARY KEY,
-                        embedding BLOB NOT NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (cat_id) REFERENCES categories(cat_id)
-                    )
-                `);
-
-                // 인덱스 생성
-                db.exec(`
-                    CREATE INDEX IF NOT EXISTS idx_categories_full_path 
-                    ON categories(major_category, middle_category, minor_category, detailed_category)
-                `);
+                // 데이터베이스 초기화
+                db = lowdb(adapter);
+                
+                // 기본 데이터 구조 설정
+                db.defaults({ 
+                    categories: [],
+                    category_embeddings: []
+                }).write();
 
                 console.error(JSON.stringify({
                     type: 'info',
-                    message: '데이터베이스 테이블과 인덱스가 생성되었습니다.'
+                    message: '데이터베이스 테이블이 생성되었습니다.'
                 }));
             }
             resolve(db);
@@ -114,8 +107,10 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
 
 // 모든 카테고리에 대한 임베딩 생성 및 저장
 export async function generateAllCategoryEmbeddings() {
-    const db = await initDatabase();
-    const categories = db.prepare('SELECT * FROM categories').all() as Category[];
+    await initDatabase();
+    if (!db) return;
+    
+    const categories = db.get('categories').value();
     
     // 배치 처리로 임베딩 생성
     const batchSize = 10;
@@ -125,32 +120,41 @@ export async function generateAllCategoryEmbeddings() {
             const fullPath = `${category.major_category} > ${category.middle_category} > ${category.minor_category} > ${category.detailed_category}`;
             const embedding = await getEmbedding(fullPath);
             
-            // 임베딩을 BLOB으로 저장
-            const blob = Buffer.from(new Float32Array(embedding).buffer);
-            db.prepare(`
-                INSERT OR REPLACE INTO category_embeddings (cat_id, embedding)
-                VALUES (?, ?)
-            `).run(category.cat_id, blob);
+            // 임베딩 저장
+            db?.get('category_embeddings')
+              .push({
+                cat_id: category.cat_id.toString(),
+                embedding: embedding,
+                created_at: new Date().toISOString()
+              })
+              .write();
         }));
     }
 }
 
 // 유사한 카테고리 검색
 export async function searchSimilarCategories(query: string, limit: number = 5): Promise<Category[]> {
-    const db = await initDatabase();
+    await initDatabase();
+    if (!db) return [];
+    
     const queryEmbedding = await getEmbedding(query);
     
     // 모든 카테고리와 임베딩 가져오기
-    const categories = db.prepare(`
-        SELECT c.*, ce.embedding
-        FROM categories c
-        JOIN category_embeddings ce ON c.cat_id = ce.cat_id
-    `).all() as (Category & { embedding: Buffer })[];
+    const categories = db.get('categories').value();
+    const embeddings = db.get('category_embeddings').value();
+    
+    // 카테고리 및 임베딩 매핑
+    const categoriesWithEmbeddings = categories.map(category => {
+        const categoryEmbedding = embeddings.find(e => e.cat_id === category.cat_id.toString());
+        return {
+            ...category,
+            embedding: categoryEmbedding?.embedding || []
+        };
+    }).filter(category => category.embedding.length > 0);
     
     // 유사도 계산 및 정렬
-    const results = categories.map(category => {
-        const categoryEmbedding = new Float32Array(category.embedding.buffer);
-        const similarity = cosineSimilarity(queryEmbedding, Array.from(categoryEmbedding));
+    const results = categoriesWithEmbeddings.map(category => {
+        const similarity = cosineSimilarity(queryEmbedding, category.embedding);
         const fullPath = `${category.major_category} > ${category.middle_category} > ${category.minor_category} > ${category.detailed_category}`;
         
         return {
@@ -164,16 +168,13 @@ export async function searchSimilarCategories(query: string, limit: number = 5):
     return results;
 }
 
-// 데이터베이스 연결 종료
+// 데이터베이스 연결 종료 (lowdb에서는 필요 없음)
 export function closeDatabase(): void {
-    if (db) {
-        console.error(JSON.stringify({
-            type: 'info',
-            message: '데이터베이스 연결을 종료합니다.'
-        }));
-        db.close();
-        db = null;
-    }
+    db = null;
+    console.error(JSON.stringify({
+        type: 'info',
+        message: '데이터베이스 연결을 종료합니다.'
+    }));
 }
 
 // 프로세스 종료 시 데이터베이스 연결 종료

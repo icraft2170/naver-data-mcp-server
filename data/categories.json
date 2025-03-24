@@ -1,0 +1,74 @@
+{
+  "categories": [
+    {
+      "cat_id": 50006033,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 전문서",
+      "detailed_category": "개발/OS/데이터베이스"
+    },
+    {
+      "cat_id": 50006035,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 전문서",
+      "detailed_category": "네트워크/해킹/보안"
+    },
+    {
+      "cat_id": 50006036,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 전문서",
+      "detailed_category": "모바일 프로그래밍"
+    },
+    {
+      "cat_id": 50006034,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 전문서",
+      "detailed_category": "웹프로그래밍"
+    },
+    {
+      "cat_id": 50006032,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 활용서",
+      "detailed_category": "IT 교양서"
+    },
+    {
+      "cat_id": 50006031,
+      "major_category": "도서",
+      "middle_category": "컴퓨터/IT",
+      "minor_category": "IT 활용서",
+      "detailed_category": "오피스 활용"
+    },
+    {
+      "cat_id": 50002033,
+      "major_category": "식품",
+      "middle_category": "음료",
+      "minor_category": "탄산수",
+      "detailed_category": ""
+    },
+    {
+      "cat_id": 50006351,
+      "major_category": "식품",
+      "middle_category": "전통주",
+      "minor_category": "약주",
+      "detailed_category": ""
+    },
+    {
+      "cat_id": 50006354,
+      "major_category": "식품",
+      "middle_category": "전통주",
+      "minor_category": "일반증류주",
+      "detailed_category": ""
+    },
+    {
+      "cat_id": 50006952,
+      "major_category": "식품",
+      "middle_category": "전통주",
+      "minor_category": "전통주선물세트",
+      "detailed_category": ""
+    }
+  ]
+}
