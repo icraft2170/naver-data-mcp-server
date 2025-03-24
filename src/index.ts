@@ -18,6 +18,13 @@ import {
   FormattedNaverSearchTrendResult,
   FormattedNaverShoppingTrendResult
 } from './types/naverTypes.js';
+import { 
+  searchSimilarCategories, 
+  generateAllCategoryEmbeddings, 
+  initDatabase, 
+  initEmbeddingPipeline,
+  Category
+} from './services/categorySearch.js';
 
 
 // MCP SDK의 타입 정의
@@ -50,6 +57,12 @@ interface McpResponse {
     meta?: { format: string };
   }>;
   [key: string]: unknown; // 인덱스 시그니처 추가
+}
+
+// 카테고리 검색 결과 응답 인터페이스
+interface CategorySearchResponse {
+  query: string;
+  results: Category[];
 }
 
 /**
@@ -134,6 +147,15 @@ async function main() {
         name: "네이버 데이터랩",
         version: "1.0.0"
     });
+
+    // 데이터베이스 및 임베딩 모델 초기화
+    try {
+        initDatabase();
+        await initEmbeddingPipeline();
+        await generateAllCategoryEmbeddings();
+    } catch (error) {
+        console.error('카테고리 검색 초기화 오류:', error);
+    }
 
     // 네이버 데이터랩 검색어 트렌드 API
     server.tool(
@@ -265,6 +287,51 @@ Parameters:
                 
                 // 응답 생성
                 return createMcpResponse(formattedResult, params.category);
+            } catch (error: any) {
+                return createErrorResponse(error);
+            }
+        }
+    );
+
+    // 카테고리 검색 API
+    server.tool(
+        "searchShoppingCategory",
+        `Search for shopping categories using natural language queries. Returns the most similar categories based on semantic similarity.
+
+Parameters:
+- query (required): Natural language query to search for categories (e.g., "men's running shoes", "smartphone accessories")
+- limit (optional): Maximum number of results to return (default: 5)`,
+        {
+            query: z.string().min(1).describe("Natural language query to search for shopping categories"),
+            limit: z.number().min(1).max(20).optional().describe("Maximum number of results to return (1-20)")
+        },
+        async (params: { query: string; limit?: number }, _extra: RequestHandlerExtra): Promise<McpResponse> => {
+            try {
+                const limit = params.limit || 5;
+                const results = await searchSimilarCategories(params.query, limit);
+                
+                const response: CategorySearchResponse = {
+                    query: params.query,
+                    results
+                };
+                
+                return {
+                    content: [
+                        { 
+                            type: "text", 
+                            text: `"${params.query}" 검색 결과:\n\n${results.map(r => 
+                                `카테고리 ID: ${r.cat_id}\n` +
+                                `카테고리: ${r.full_category_path}\n` +
+                                `유사도: ${(r.similarity! * 100).toFixed(2)}%`
+                            ).join('\n\n')}`
+                        },
+                        { 
+                            type: "text", 
+                            text: JSON.stringify(response, null, 2),
+                            meta: { format: "json" } 
+                        }
+                    ]
+                };
             } catch (error: any) {
                 return createErrorResponse(error);
             }
