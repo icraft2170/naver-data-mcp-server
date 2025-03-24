@@ -4,6 +4,15 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { initData } from './initData.js';
 
+// 카테고리 데이터 인터페이스 정의
+interface CategoryData {
+  cat_id: number | string;
+  major_category: string;
+  middle_category: string;
+  minor_category: string;
+  detailed_category: string;
+}
+
 // ESM에서 __dirname 구현
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,7 +57,7 @@ const insertCategory = db.prepare(`
 `);
 
 // 트랜잭션으로 샘플 데이터 삽입
-const insertCategories = db.transaction((categories) => {
+const insertCategories = db.transaction((categories: CategoryData[]) => {
   for (const category of categories) {
     insertCategory.run(category.cat_id, category.major_category, category.middle_category, category.minor_category, category.detailed_category);
   }

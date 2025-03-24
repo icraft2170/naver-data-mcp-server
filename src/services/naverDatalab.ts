@@ -39,7 +39,7 @@ export const ShoppingKeywordTrendRequestSchema = z.object({
   category: z.string(),
   keyword: z.array(z.object({
     name: z.string(),
-    param: z.array(z.string().min(1).max(5))
+    param: z.array(z.string().min(1)).length(1)
   })).min(1).max(3),
   device: z.enum(['pc', 'mo', '']).optional(),
   gender: z.enum(['f', 'm', '']).optional(),

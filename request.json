@@ -1,0 +1,9 @@
+{
+  "type": "request",
+  "id": "1",
+  "method": "searchShoppingCategory",
+  "params": {
+    "query": "남성용 운동화",
+    "limit": 5
+  }
+}

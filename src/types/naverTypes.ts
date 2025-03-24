@@ -146,4 +146,21 @@ export interface NaverApiRequestParams {
   endDate: string;
   timeUnit: TimeUnit;
   [key: string]: any;
+}
+
+// 카테고리 인터페이스
+export interface Category {
+    cat_id: string;
+    major_category: string;
+    middle_category: string;
+    minor_category: string;
+    detailed_category: string;
+    full_category_path?: string;
+    similarity?: number;
+}
+
+// 카테고리 검색 결과 응답 인터페이스
+export interface CategorySearchResponse {
+    query: string;
+    results: Category[];
 } 

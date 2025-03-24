@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { pipeline } from '@xenova/transformers';
 import fs from 'fs';
+import { Category } from '../types/naverTypes.js';
 
 // ESM에서 __dirname 사용을 위한 workaround
 const __filename = fileURLToPath(import.meta.url);
@@ -23,21 +24,12 @@ const CACHE_DIR = join(__dirname, '../../.cache/transformers');
 // 임베딩 파이프라인 초기화
 let embeddingPipeline: any = null;
 
-export interface Category {
-    cat_id: string;
-    major_category: string;
-    middle_category: string;
-    minor_category: string;
-    detailed_category: string;
-    full_category_path: string;
-    similarity?: number;
-}
-
 // 임베딩 파이프라인 초기화 함수
 export async function initEmbeddingPipeline() {
     if (!embeddingPipeline) {
         embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
-            cache_dir: CACHE_DIR
+            cache_dir: CACHE_DIR,
+            quantized: true
         });
     }
     return embeddingPipeline;
@@ -46,39 +38,69 @@ export async function initEmbeddingPipeline() {
 // 데이터베이스 초기화
 let db: Database | null = null;
 
-export function initDatabase(): Database {
-    if (!db) {
-        db = new betterSqlite3(DB_PATH);
-        
-        // categories 테이블 생성
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS categories (
-                cat_id TEXT PRIMARY KEY,
-                major_category TEXT NOT NULL,
-                middle_category TEXT,
-                minor_category TEXT,
-                detailed_category TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+export function initDatabase(): Promise<Database> {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!db) {
+                console.error(JSON.stringify({
+                    type: 'info',
+                    message: '데이터베이스 연결을 초기화합니다...'
+                }));
+                
+                db = new betterSqlite3(DB_PATH);
+                
+                // categories 테이블 생성
+                db.exec(`
+                    CREATE TABLE IF NOT EXISTS categories (
+                        cat_id TEXT PRIMARY KEY,
+                        major_category TEXT NOT NULL,
+                        middle_category TEXT,
+                        minor_category TEXT,
+                        detailed_category TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
 
-        // category_embeddings 테이블 생성
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS category_embeddings (
-                cat_id TEXT PRIMARY KEY,
-                embedding BLOB NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (cat_id) REFERENCES categories(cat_id)
-            )
-        `);
-    }
-    return db;
+                // category_embeddings 테이블 생성
+                db.exec(`
+                    CREATE TABLE IF NOT EXISTS category_embeddings (
+                        cat_id TEXT PRIMARY KEY,
+                        embedding BLOB NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (cat_id) REFERENCES categories(cat_id)
+                    )
+                `);
+
+                // 인덱스 생성
+                db.exec(`
+                    CREATE INDEX IF NOT EXISTS idx_categories_full_path 
+                    ON categories(major_category, middle_category, minor_category, detailed_category)
+                `);
+
+                console.error(JSON.stringify({
+                    type: 'info',
+                    message: '데이터베이스 테이블과 인덱스가 생성되었습니다.'
+                }));
+            }
+            resolve(db);
+        } catch (error) {
+            console.error(JSON.stringify({
+                type: 'error',
+                message: '데이터베이스 초기화 중 오류 발생',
+                error: error instanceof Error ? error.message : String(error)
+            }));
+            reject(error);
+        }
+    });
 }
 
-// 텍스트를 임베딩 벡터로 변환
+// 임베딩 생성 함수
 async function getEmbedding(text: string): Promise<number[]> {
     const pipeline = await initEmbeddingPipeline();
-    const output = await pipeline(text, { pooling: 'mean', normalize: true });
+    const output = await pipeline(text, {
+        pooling: 'mean',
+        normalize: true
+    });
     return Array.from(output.data);
 }
 
@@ -92,25 +114,30 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
 
 // 모든 카테고리에 대한 임베딩 생성 및 저장
 export async function generateAllCategoryEmbeddings() {
-    const db = initDatabase();
+    const db = await initDatabase();
     const categories = db.prepare('SELECT * FROM categories').all() as Category[];
     
-    for (const category of categories) {
-        const fullPath = `${category.major_category} > ${category.middle_category} > ${category.minor_category} > ${category.detailed_category}`;
-        const embedding = await getEmbedding(fullPath);
-        
-        // 임베딩을 BLOB으로 저장
-        const blob = Buffer.from(new Float32Array(embedding).buffer);
-        db.prepare(`
-            INSERT OR REPLACE INTO category_embeddings (cat_id, embedding)
-            VALUES (?, ?)
-        `).run(category.cat_id, blob);
+    // 배치 처리로 임베딩 생성
+    const batchSize = 10;
+    for (let i = 0; i < categories.length; i += batchSize) {
+        const batch = categories.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (category) => {
+            const fullPath = `${category.major_category} > ${category.middle_category} > ${category.minor_category} > ${category.detailed_category}`;
+            const embedding = await getEmbedding(fullPath);
+            
+            // 임베딩을 BLOB으로 저장
+            const blob = Buffer.from(new Float32Array(embedding).buffer);
+            db.prepare(`
+                INSERT OR REPLACE INTO category_embeddings (cat_id, embedding)
+                VALUES (?, ?)
+            `).run(category.cat_id, blob);
+        }));
     }
 }
 
 // 유사한 카테고리 검색
 export async function searchSimilarCategories(query: string, limit: number = 5): Promise<Category[]> {
-    const db = initDatabase();
+    const db = await initDatabase();
     const queryEmbedding = await getEmbedding(query);
     
     // 모든 카테고리와 임베딩 가져오기
@@ -140,6 +167,10 @@ export async function searchSimilarCategories(query: string, limit: number = 5):
 // 데이터베이스 연결 종료
 export function closeDatabase(): void {
     if (db) {
+        console.error(JSON.stringify({
+            type: 'info',
+            message: '데이터베이스 연결을 종료합니다.'
+        }));
         db.close();
         db = null;
     }
