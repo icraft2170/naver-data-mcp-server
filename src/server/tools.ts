@@ -121,12 +121,10 @@ Parameters:
         },
         async (params: NaverShoppingCategoryTrendParams, _extra: RequestHandlerExtra) => {
             try {
-                console.log('getNaverShoppingCategoryTrend 요청 파라미터:', JSON.stringify(params, null, 2));
                 
                 // 네이버 쇼핑인사이트 API 호출
                 const response = await fetchNaverShoppingCategoryTrend(params);
                 
-                console.log('API 응답:', JSON.stringify(response, null, 2));
                 
                 // 응답 유효성 검사
                 if (!response) {
@@ -153,11 +151,9 @@ Parameters:
     // HTTP 서버를 위해 핸들러 저장
     registerToolHandler("getNaverShoppingCategoryTrend", async (params: NaverShoppingCategoryTrendParams, _extra: RequestHandlerExtra) => {
         try {
-            console.log('getNaverShoppingCategoryTrend HTTP 요청 파라미터:', JSON.stringify(params, null, 2));
             
             const response = await fetchNaverShoppingCategoryTrend(params);
-            
-            console.log('API 응답:', JSON.stringify(response, null, 2));
+        
             
             // 응답 유효성 검사
             if (!response) {
@@ -180,7 +176,7 @@ Parameters:
     // 네이버 쇼핑인사이트 키워드별 트렌드 API
     server.tool(
         "getNaverShoppingKeywordTrend",
-        `Retrieves keyword trend data within a specific shopping category from Naver Shopping Insights API. Allows comparing search volume trends for specific keywords in a category.
+        `Retrieves shopping keyword trend data from Naver Shopping Insights API. Allows comparing search volume trends for specific keywords within a shopping category.
 
 Parameters:
 - startDate (required): Start date in YYYY-MM-DD format (available from 2017-08-01)
@@ -189,17 +185,27 @@ Parameters:
 - category (required): Shopping category code from Naver Shopping (cat_id parameter from shopping.naver.com)
 - keyword (required): Array of keyword groups to compare (max 3 groups)
   - name: Name of the keyword group
-  - param: Array of keywords to track (max 5 keywords per group)
+  - param: Array of keywords to track (max 5 characters per keyword)
 - device (optional): Device type filter ("pc" for desktop, "mo" for mobile, or empty for all)
 - gender (optional): Gender filter ("f" for female, "m" for male, or empty for all)
-- ages (optional): Array of age group codes from "1" to "11"`,
+- ages (optional): Array of age group codes from "1" to "11"
+
+Note: Each keyword in the param array must be 5 characters or less. If a keyword exceeds 5 characters, only the first 5 characters will be used.`,
         {
             ...dateRangeSchema,
             category: z.string().describe("Shopping category code from Naver Shopping"),
             keyword: z.array(
                 z.object({
                     name: z.string().describe("Name of the keyword group"),
-                    param: z.array(z.string().min(1).max(5)).describe("Array of keywords (max 5) to track in this group")
+                    param: z.array(
+                        z.string()
+                            .min(1)
+                            .max(5)
+                            .refine(
+                                (val) => val.length <= 5,
+                                { message: "검색어는 최대 5자까지만 가능합니다." }
+                            )
+                    ).describe("Array of keywords (max 5 characters per keyword) to track in this group")
                 })
             ).min(1).max(3).describe("Array of keyword groups (max 3) to compare trends"),
             device: deviceSchema.describe("Device type filter: 'pc' for desktop, 'mo' for mobile, or empty for all"),
@@ -208,12 +214,10 @@ Parameters:
         },
         async (params: NaverShoppingKeywordTrendParams, _extra: RequestHandlerExtra) => {
             try {
-                console.log('getNaverShoppingKeywordTrend 요청 파라미터:', JSON.stringify(params, null, 2));
                 
                 // 네이버 쇼핑인사이트 API 호출
                 const response = await fetchNaverShoppingKeywordTrend(params);
                 
-                console.log('API 응답:', JSON.stringify(response, null, 2));
                 
                 // 응답 유효성 검사
                 if (!response) {
@@ -240,11 +244,9 @@ Parameters:
     // HTTP 서버를 위해 핸들러 저장
     registerToolHandler("getNaverShoppingKeywordTrend", async (params: NaverShoppingKeywordTrendParams, _extra: RequestHandlerExtra) => {
         try {
-            console.log('getNaverShoppingKeywordTrend HTTP 요청 파라미터:', JSON.stringify(params, null, 2));
             
             const response = await fetchNaverShoppingKeywordTrend(params);
             
-            console.log('API 응답:', JSON.stringify(response, null, 2));
             
             // 응답 유효성 검사
             if (!response) {

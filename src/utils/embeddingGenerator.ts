@@ -1,5 +1,4 @@
 import { readFileSync, writeFileSync } from 'fs';
-import path from 'path';
 import Hangul from 'hangul-js';
 
 interface CategoryData {

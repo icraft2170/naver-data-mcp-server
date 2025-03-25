@@ -68,9 +68,25 @@ export const createErrorResponse = (error: any): McpResponse => {
                           error.message?.includes('parsing') ||
                           error.message?.includes('parse');
 
-    const errorMessage = isParsingError ? 
-        '데이터 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' : 
-        error.message || '알 수 없는 오류가 발생했습니다.';
+    // 키워드 길이 제한 오류인 경우
+    const isKeywordLengthError = error.message?.includes('too_big') && 
+                                error.message?.includes('5 character');
+
+    // Zod 검증 오류인 경우
+    const isZodError = error.message?.includes('ZodError') || 
+                       error.message?.includes('Invalid input') ||
+                       error.message?.includes('Expected object');
+
+    let errorMessage: string;
+    if (isParsingError) {
+        errorMessage = '데이터 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+    } else if (isKeywordLengthError) {
+        errorMessage = '검색어는 5자를 초과할 수 없습니다. 더 짧은 검색어를 사용해주세요.';
+    } else if (isZodError) {
+        errorMessage = '입력하신 데이터 형식이 올바르지 않습니다. 파라미터 형식을 확인해주세요.';
+    } else {
+        errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
+    }
 
     return {
         content: [{ 

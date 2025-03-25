@@ -1,6 +1,6 @@
 {
   "name": "naver-datalab-mcp-server",
-  "version": "1.0.37",
+  "version": "1.1.0",
   "description": "네이버 데이터랩 API MCP 서버 구현",
   "main": "dist/index.js",
   "type": "module",

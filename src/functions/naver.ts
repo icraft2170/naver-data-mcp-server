@@ -62,10 +62,6 @@ const callNaverApi = async <T, R>(
       const headers = getNaverApiHeaders();
       const requestParams = processRequestParams(params as any);
       
-      // 개발 환경에서만 로깅
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`API 요청 파라미터: ${JSON.stringify(requestParams)}`);
-      }
       
       // fetch 요청
       const fetchOptions: any = {
@@ -136,10 +132,6 @@ const callNaverApi = async <T, R>(
         throw new Error(`${errorPrefix} 응답이 유효하지 않습니다.`);
       }
       
-      // 개발 환경에서만 로깅
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`API 응답:`, typeof data, Array.isArray(data) ? 'array' : 'object', Object.keys(data));
-      }
       
       // 기본 응답 구조 생성 (비어있는 경우를 위해)
       if (!('results' in data)) {
@@ -235,10 +227,24 @@ export const fetchNaverShoppingKeywordTrend = async (params: NaverShoppingKeywor
   // 키워드 파라미터 배열에서 각 param에 첫 번째 요소만 남기도록 수정
   const modifiedParams = {
     ...params,
-    keyword: params.keyword.map(item => ({
-      name: item.name,
-      param: item.param.slice(0, 1) // 첫 번째 요소만 유지
-    }))
+    keyword: params.keyword.map(item => {
+      // 키워드가 5자를 초과하는 경우 처리
+      const keyword = item.param[0];
+      if (keyword.length > 5) {
+        // 개발 환경에서만 로깅
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`키워드 "${keyword}"가 5자를 초과하여 첫 5자만 사용합니다.`);
+        }
+        return {
+          name: item.name,
+          param: [keyword.slice(0, 5)] // 첫 5자만 사용
+        };
+      }
+      return {
+        name: item.name,
+        param: [keyword]
+      };
+    })
   };
   
   return callNaverApi<NaverShoppingKeywordTrendParams, NaverShoppingTrendResponse>(
