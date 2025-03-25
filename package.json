@@ -1,6 +1,6 @@
 {
   "name": "naver-datalab-mcp-server",
-  "version": "1.0.28",
+  "version": "1.0.37",
   "description": "네이버 데이터랩 API MCP 서버 구현",
   "main": "dist/index.js",
   "type": "module",
@@ -9,20 +9,27 @@
   },
   "files": [
     "dist",
+    "data",
     "README.md"
   ],
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --exec ts-node --esm ./src/index.ts",
-    "build": "tsc",
+    "build": "npm run clean && tsc && npm run copy-data && npm run ensure-data-dir",
     "clean": "rimraf dist",
     "prebuild": "npm run clean",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
     "test:mcp": "ts-node --esm src/test/mcp-test.ts",
+    "test:category": "NODE_OPTIONS=--experimental-specifier-resolution=node ts-node --esm src/tests/categorySearch.test.ts",
+    "test:category:js": "node --experimental-specifier-resolution=node src/tests/scriptTest.js",
+    "test:category:dist": "node dist/tests/categoryTest.js",
     "prepare": "npm run build",
-    "postinstall": "chmod +x ./dist/index.js",
-    "init-db": "ts-node --esm src/db/initDb.ts"
+    "postinstall": "chmod +x ./dist/index.js && npm run ensure-data-dir",
+    "init-db": "ts-node --esm src/db/initDb.ts",
+    "generate-embeddings": "ts-node --esm src/scripts/generatePrebuiltEmbeddings.ts",
+    "copy-data": "mkdir -p dist/data && cp -r src/data/* dist/data/",
+    "ensure-data-dir": "mkdir -p data && chmod 777 data"
   },
   "keywords": [
     "mcp",
@@ -38,8 +45,9 @@
     "@xenova/transformers": "^2.17.2",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
+    "hangul-js": "^0.2.6",
     "lowdb": "^1.0.0",
-    "node-fetch": "^2.7.0",
+    "node-fetch": "^2.6.9",
     "zod": "^3.24.2"
   },
   "devDependencies": {

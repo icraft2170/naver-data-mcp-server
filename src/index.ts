@@ -3,9 +3,8 @@
 import 'dotenv/config';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { initDatabase, generateAllCategoryEmbeddings } from './services/categorySearch.js';
-import { startHttpServer, stopHttpServer } from './server/httpServer.js';
 import { registerMcpTools } from './server/tools.js';
+import { startHttpServer, stopHttpServer } from './server/httpServer.js';
 
 // Node 버전 체크
 const requiredVersion = 18;
@@ -16,7 +15,6 @@ if (currentVersion < requiredVersion) {
         type: 'warning',
         message: `권장 Node 버전은 18.0.0 이상입니다. 현재 버전: ${process.version}. 일부 기능이 제대로 작동하지 않을 수 있습니다.`
     }));
-    // 경고만 표시하고 계속 실행
 }
 
 // 환경 변수 유효성 검사
@@ -58,13 +56,13 @@ async function main() {
         const server = new McpServer({
             name: "네이버 데이터랩",
             version: "1.0.0",
-            port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+            port: process.env.PORT ? parseInt(process.env.PORT) : 3001,
             host: process.env.HOST || 'localhost'
         });
 
         // HTTP 서버 시작
         try {
-            const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+            const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
             await startHttpServer(port);
         } catch (error: any) {
             console.error(JSON.stringify({
@@ -72,32 +70,6 @@ async function main() {
                 message: `HTTP 서버 시작 실패: ${error.message}. StdioServerTransport만 사용합니다.`
             }));
         }
-
-        // 백그라운드에서 데이터베이스 초기화 시작
-        console.error(JSON.stringify({
-            type: 'info',
-            message: '데이터베이스 초기화를 시작합니다...'
-        }));
-        
-        const db = await initDatabase();
-        console.error(JSON.stringify({
-            type: 'info',
-            message: '데이터베이스 초기화가 완료되었습니다.'
-        }));
-        
-        // 임베딩 생성 시작
-        generateAllCategoryEmbeddings().then(() => {
-            console.error(JSON.stringify({
-                type: 'info',
-                message: '카테고리 임베딩 생성이 완료되었습니다.'
-            }));
-        }).catch((error: Error) => {
-            console.error(JSON.stringify({
-                type: 'error',
-                message: '카테고리 임베딩 생성 중 오류 발생',
-                error: error.message
-            }));
-        });
 
         // MCP 도구 등록
         registerMcpTools(server);

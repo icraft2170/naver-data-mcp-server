@@ -1,6 +1,7 @@
 import { 
     FormattedNaverSearchTrendResult, 
-    FormattedNaverShoppingTrendResult 
+    FormattedNaverShoppingTrendResult,
+    CategorySearchResult
 } from '../types/naverTypes.js';
 import { McpResponse } from '../types/mcpTypes.js';
 import { formatResultText } from './formatter.js';
@@ -12,9 +13,30 @@ import { formatResultText } from './formatter.js';
  * @returns MCP 응답 객체
  */
 export const createMcpResponse = (
-    formattedResult: FormattedNaverSearchTrendResult | FormattedNaverShoppingTrendResult, 
+    formattedResult: FormattedNaverSearchTrendResult | FormattedNaverShoppingTrendResult | CategorySearchResult, 
     category?: string
 ): McpResponse => {
+    // 카테고리 검색 결과인 경우 다른 포맷 사용
+    if ('query' in formattedResult) {
+        return {
+            content: [
+                { 
+                    type: "text", 
+                    text: `"${formattedResult.query}" 검색 결과:\n\n${formattedResult.results.map(r => 
+                        `카테고리 ID: ${r.cat_id}\n` +
+                        `카테고리: ${r.full_category_path}\n` +
+                        `유사도: ${(r.similarity * 100).toFixed(2)}%`
+                    ).join('\n\n')}`
+                },
+                { 
+                    type: "text", 
+                    text: JSON.stringify(formattedResult, null, 2),
+                    meta: { format: "json" } 
+                }
+            ]
+        };
+    }
+
     const resultText = formatResultText(formattedResult, category);
     
     return {
@@ -35,11 +57,26 @@ export const createMcpResponse = (
  * @returns 오류 응답 객체
  */
 export const createErrorResponse = (error: any): McpResponse => {
+    // 개발 환경에서만 상세 오류 로깅
+    if (process.env.NODE_ENV === 'development') {
+        console.error('API 오류 상세:', error);
+    }
+
+    // USON 관련 오류나 JSON 파싱 오류인 경우 일반적인 오류 메시지 반환
+    const isParsingError = error.message?.includes('USON') || 
+                          error.message?.includes('JSON') ||
+                          error.message?.includes('parsing') ||
+                          error.message?.includes('parse');
+
+    const errorMessage = isParsingError ? 
+        '데이터 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' : 
+        error.message || '알 수 없는 오류가 발생했습니다.';
+
     return {
         content: [{ 
             type: "text", 
             text: JSON.stringify({
-                error: error.message,
+                error: errorMessage,
                 details: error.response?.data || "네이버 API 호출 중 오류가 발생했습니다"
             }, null, 2) 
         }]

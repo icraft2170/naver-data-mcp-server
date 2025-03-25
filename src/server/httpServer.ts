@@ -47,7 +47,7 @@ export const startHttpServer = async (port: number): Promise<any> => {
                         const result = await handler(parameters, {});
                         return res.json({
                             jsonrpc: '2.0',
-                            result,
+                            result: result.content,
                             id
                         });
                     } catch (error: any) {
@@ -69,15 +69,16 @@ export const startHttpServer = async (port: number): Promise<any> => {
             }
         });
 
-        // 서버 시작
-        httpServer = expressApp.listen(port, () => {
-            console.error(JSON.stringify({
-                type: 'info',
-                message: `HTTP 서버가 http://localhost:${port} 에서 시작되었습니다.`
-            }));
+        // 서버 시작을 Promise로 래핑
+        return new Promise((resolve) => {
+            httpServer = expressApp.listen(port, () => {
+                console.error(JSON.stringify({
+                    type: 'info',
+                    message: `HTTP 서버가 http://localhost:${port} 에서 시작되었습니다.`
+                }));
+                resolve(httpServer);
+            });
         });
-        
-        return httpServer;
     } catch (error: any) {
         console.error(JSON.stringify({
             type: 'warning',

@@ -12,7 +12,7 @@ import {
     NaverSearchTrendParams, 
     NaverShoppingCategoryTrendParams, 
     NaverShoppingKeywordTrendParams, 
-    CategorySearchResponse 
+    CategorySearchResult 
 } from '../types/naverTypes.js';
 import { 
     timeUnitSchema, 
@@ -264,45 +264,26 @@ Parameters:
         }
     });
 
-    // 카테고리 검색 API
+    // 쇼핑 카테고리 검색 도구
     server.tool(
         "searchShoppingCategory",
-        `Search for shopping categories using natural language queries. Returns the most similar categories based on semantic similarity.
+        `Searches for shopping categories based on a query string.
 
 Parameters:
-- query (required): Natural language query to search for categories (e.g., "men's running shoes", "smartphone accessories")
+- query (required): Search query string
 - limit (optional): Maximum number of results to return (default: 5)`,
         {
-            query: z.string().min(1).describe("Natural language query to search for shopping categories"),
-            limit: z.number().min(1).max(20).optional().describe("Maximum number of results to return (1-20)")
+            query: z.string().describe("Search query string"),
+            limit: z.number().min(1).max(10).default(5).describe("Maximum number of results to return")
         },
-        async (params: { query: string; limit?: number }, _extra: RequestHandlerExtra) => {
+        async (params: { query: string; limit: number }, _extra: RequestHandlerExtra) => {
             try {
-                const limit = params.limit || 5;
-                const results = await searchSimilarCategories(params.query, limit);
-                
-                const response: CategorySearchResponse = {
+                const results = await searchSimilarCategories(params.query, params.limit);
+                return createMcpResponse({
+                    title: "쇼핑 카테고리 검색 결과",
                     query: params.query,
                     results
-                };
-                
-                return {
-                    content: [
-                        { 
-                            type: "text", 
-                            text: `"${params.query}" 검색 결과:\n\n${results.map(r => 
-                                `카테고리 ID: ${r.cat_id}\n` +
-                                `카테고리: ${r.full_category_path}\n` +
-                                `유사도: ${(r.similarity! * 100).toFixed(2)}%`
-                            ).join('\n\n')}`
-                        },
-                        { 
-                            type: "text", 
-                            text: JSON.stringify(response, null, 2),
-                            meta: { format: "json" } 
-                        }
-                    ]
-                };
+                });
             } catch (error: any) {
                 return createErrorResponse(error);
             }
@@ -310,33 +291,14 @@ Parameters:
     );
 
     // HTTP 서버를 위해 핸들러 저장
-    registerToolHandler("searchShoppingCategory", async (params: { query: string; limit?: number }, _extra: RequestHandlerExtra) => {
+    registerToolHandler("searchShoppingCategory", async (params: { query: string; limit: number }, _extra: RequestHandlerExtra) => {
         try {
-            const limit = params.limit || 5;
-            const results = await searchSimilarCategories(params.query, limit);
-            
-            const response: CategorySearchResponse = {
+            const results = await searchSimilarCategories(params.query, params.limit);
+            return createMcpResponse({
+                title: "쇼핑 카테고리 검색 결과",
                 query: params.query,
                 results
-            };
-            
-            return {
-                content: [
-                    { 
-                        type: "text", 
-                        text: `"${params.query}" 검색 결과:\n\n${results.map(r => 
-                            `카테고리 ID: ${r.cat_id}\n` +
-                            `카테고리: ${r.full_category_path}\n` +
-                            `유사도: ${(r.similarity! * 100).toFixed(2)}%`
-                        ).join('\n\n')}`
-                    },
-                    { 
-                        type: "text", 
-                        text: JSON.stringify(response, null, 2),
-                        meta: { format: "json" } 
-                    }
-                ]
-            };
+            });
         } catch (error: any) {
             return createErrorResponse(error);
         }

@@ -1,5 +1,5 @@
-import { NaverSearchTrendResponse, NaverShoppingTrendResponse } from '../types/naverTypes';
-import { formatSearchTrendResult, formatShoppingTrendResult } from '../functions/naver';
+import { NaverSearchTrendResponse, NaverShoppingTrendResponse } from '../types/naverTypes.js';
+import { formatSearchTrendResult, formatShoppingTrendResult } from '../functions/naver.js';
 
 console.log('네이버 API 응답 포맷팅 테스트 파일이 로드되었습니다.');
 

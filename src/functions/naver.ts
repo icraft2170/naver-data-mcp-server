@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import fetch, { Headers } from 'node-fetch';
 import { 
   NaverSearchTrendParams, 
   NaverSearchTrendResponse,
@@ -9,10 +9,10 @@ import {
   FormattedNaverShoppingTrendResult,
   NaverApiRequestParams,
   PeriodRatioData
-} from '../types/naverTypes';
+} from '../types/naverTypes.js';
 
 // 네이버 API 호출을 위한 공통 헤더
-const getNaverApiHeaders = () => ({
+const getNaverApiHeaders = () => new Headers({
   'Content-Type': 'application/json',
   'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID || '',
   'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET || ''
@@ -62,7 +62,10 @@ const callNaverApi = async <T, R>(
       const headers = getNaverApiHeaders();
       const requestParams = processRequestParams(params as any);
       
-      console.log(`API 요청 파라미터: ${JSON.stringify(requestParams)}`);
+      // 개발 환경에서만 로깅
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`API 요청 파라미터: ${JSON.stringify(requestParams)}`);
+      }
       
       // fetch 요청
       const fetchOptions: any = {
@@ -79,7 +82,9 @@ const callNaverApi = async <T, R>(
           timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           fetchOptions.signal = controller.signal;
         } catch (e) {
-          console.error('AbortController를 사용할 수 없습니다:', e);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('AbortController를 사용할 수 없습니다:', e);
+          }
         }
       }
       
@@ -109,22 +114,38 @@ const callNaverApi = async <T, R>(
       try {
         data = JSON.parse(rawText) as R;
       } catch (e) {
-        console.error(`JSON 파싱 오류:`, e, `원본 텍스트:`, rawText);
+        // USON 파싱 오류인 경우 개발 환경에서만 로깅
+        if (process.env.NODE_ENV === 'development') {
+          if (e instanceof Error && e.message.includes('USON')) {
+            console.error(`USON 파싱 오류:`, {
+              error: e.message,
+              rawText: rawText.substring(0, 500) + '...'
+            });
+          } else {
+            console.error(`JSON 파싱 오류:`, e, `원본 텍스트:`, rawText);
+          }
+        }
         throw new Error(`${errorPrefix} 응답을 JSON으로 파싱할 수 없습니다.`);
       }
       
       // 응답 유효성 검사
       if (!data || typeof data !== 'object') {
-        console.error(`API 응답이 유효하지 않습니다:`, data);
-        throw new Error(`${errorPrefix} 응답이 유효하지 않습니다: ${JSON.stringify(data)}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`API 응답이 유효하지 않습니다:`, data);
+        }
+        throw new Error(`${errorPrefix} 응답이 유효하지 않습니다.`);
       }
       
-      // 응답 로깅
-      console.log(`API 응답:`, typeof data, Array.isArray(data) ? 'array' : 'object', Object.keys(data));
+      // 개발 환경에서만 로깅
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`API 응답:`, typeof data, Array.isArray(data) ? 'array' : 'object', Object.keys(data));
+      }
       
       // 기본 응답 구조 생성 (비어있는 경우를 위해)
       if (!('results' in data)) {
-        console.warn(`API 응답에 results 필드가 없습니다. 빈 배열 추가:`, data);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`API 응답에 results 필드가 없습니다. 빈 배열 추가:`, data);
+        }
         (data as any).results = [];
       }
       
@@ -132,11 +153,14 @@ const callNaverApi = async <T, R>(
     } catch (error: any) {
       lastError = error;
       
-      // AbortError는 타임아웃 오류
-      if (error.name === 'AbortError') {
-        console.error(`${errorPrefix} 요청 타임아웃 (시도 ${attempt}/${maxRetries})`);
-      } else {
-        console.error(`${errorPrefix} 호출 중 오류 발생 (시도 ${attempt}/${maxRetries}):`, error);
+      // 개발 환경에서만 로깅
+      if (process.env.NODE_ENV === 'development') {
+        // AbortError는 타임아웃 오류
+        if (error.name === 'AbortError') {
+          console.error(`${errorPrefix} 요청 타임아웃 (시도 ${attempt}/${maxRetries})`);
+        } else {
+          console.error(`${errorPrefix} 호출 중 오류 발생 (시도 ${attempt}/${maxRetries}):`, error);
+        }
       }
       
       // 마지막 시도가 아니면 잠시 대기 후 재시도
@@ -146,7 +170,10 @@ const callNaverApi = async <T, R>(
       }
       
       // 모든 재시도 실패 - 기본 구조 반환
-      console.error(`${errorPrefix} 모든 재시도 실패, 기본 응답 구조 반환`);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`${errorPrefix} 모든 재시도 실패, 기본 응답 구조 반환`);
+      }
+      
       const basicResponse: any = {
         startDate: '',
         endDate: '',

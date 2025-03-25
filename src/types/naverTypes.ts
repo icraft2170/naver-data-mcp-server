@@ -150,17 +150,52 @@ export interface NaverApiRequestParams {
 
 // 카테고리 인터페이스
 export interface Category {
-    cat_id: string;
-    major_category: string;
-    middle_category: string;
-    minor_category: string;
-    detailed_category: string;
-    full_category_path?: string;
-    similarity?: number;
+  cat_id: string;
+  major_category: string;
+  middle_category: string;
+  minor_category: string;
+  detailed_category: string;
+  full_category_path?: string;
+  similarity?: number;
 }
 
 // 카테고리 검색 결과 응답 인터페이스
-export interface CategorySearchResponse {
+export interface CategorySearchResult {
+    title: string;
     query: string;
-    results: Category[];
+    results: Array<{
+        cat_id: string;
+        full_category_path: string;
+        similarity: number;
+    }>;
+}
+
+export interface PrebuiltEmbedding {
+    cat_id: string;
+    embedding: number[];
+    full_category_path: string;
+}
+
+export interface KeywordTrend {
+  period: string;
+  ratio: number;
+}
+
+export interface DataLabResponse {
+  startDate: string;
+  endDate: string;
+  timeUnit: string;
+  results: Array<{
+    title: string;
+    keywords: Array<{
+      name: string;
+      data: KeywordTrend[];
+    }>;
+  }>;
+}
+
+export interface CategoryEmbedding {
+  cat_id: string;
+  embedding: number[];
+  full_category_path: string;
 } 

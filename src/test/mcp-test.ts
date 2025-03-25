@@ -1,6 +1,16 @@
 import 'dotenv/config';
 import fetch from 'node-fetch';
 
+interface McpResponse {
+    jsonrpc: string;
+    id: number;
+    result?: any;
+    error?: {
+        code: number;
+        message: string;
+    };
+}
+
 /**
  * MCP 서버에 도구 호출 요청을 보내는 함수
  * @param toolName 호출할 도구 이름
@@ -23,7 +33,7 @@ async function callMcpTool(toolName: string, params: any) {
         console.log(`[DEBUG] ${toolName} 호출 파라미터:`, JSON.stringify(params, null, 2));
 
         // 로컬 MCP 서버에 요청
-        const response = await fetch('http://localhost:3000', {
+        const response = await fetch('http://localhost:3001', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -32,9 +42,19 @@ async function callMcpTool(toolName: string, params: any) {
         });
 
         // 응답 처리
-        const responseData = await response.json();
+        const responseData = await response.json() as McpResponse;
 
-        
+        // 응답 세부 정보 로깅
+        console.log(`[RESPONSE] JSON 응답 데이터 구조:`, 
+          JSON.stringify({
+            hasResult: !!responseData.result,
+            hasError: !!responseData.error,
+            resultType: responseData.result ? typeof responseData.result : 'N/A',
+            errorMessage: responseData.error ? responseData.error.message : 'N/A',
+            status: response.status
+          }, null, 2)
+        );
+
         if (responseData.error) {
             throw new Error(`MCP 도구 호출 오류: ${responseData.error.message}`);
         }
@@ -66,21 +86,21 @@ async function testMultipleCategories() {
         for (const category of categories) {
             const result = await callMcpTool('searchShoppingCategory', category);
             
-            if (!result.content || !result.content[1] || !result.content[1].text) {
+            if (!result || !result[0] || !result[0].text) {
                 console.log(`${category.query} 카테고리 검색 결과가 없습니다.`);
                 continue;
             }
             
-            const resultJson = JSON.parse(result.content[1].text);
-            
-            if (!resultJson.results || resultJson.results.length === 0) {
-                console.log(`${category.query} 검색된 카테고리가 없습니다.`);
+            const firstResult = result[0].text;
+            const match = firstResult.match(/카테고리 ID: (\d+)/);
+            if (!match) {
+                console.log(`${category.query} 카테고리 ID를 찾을 수 없습니다.`);
                 continue;
             }
             
             categoryIds.push({
                 name: category.query,
-                id: resultJson.results[0].cat_id
+                id: match[1]
             });
         }
         
@@ -129,19 +149,19 @@ async function runMcpTest() {
         console.log(JSON.stringify(categorySearchResult, null, 2));
         
         // 검색된 카테고리가 있는지 확인
-        if (!categorySearchResult.content || !categorySearchResult.content[1] || 
-            !categorySearchResult.content[1].text) {
+        if (!categorySearchResult.content || !categorySearchResult.content[0] || 
+            !categorySearchResult.content[0].text) {
             throw new Error('카테고리 검색 결과가 없습니다.');
         }
         
-        // JSON 결과에서 첫 번째 카테고리 ID 추출
-        const resultJson = JSON.parse(categorySearchResult.content[1].text);
-        
-        if (!resultJson.results || resultJson.results.length === 0) {
-            throw new Error('검색된 카테고리가 없습니다.');
+        // 첫 번째 카테고리 ID 추출
+        const firstResult = categorySearchResult.content[0].text;
+        const match = firstResult.match(/카테고리 ID: (\d+)/);
+        if (!match) {
+            throw new Error('카테고리 ID를 찾을 수 없습니다.');
         }
         
-        const categoryId = resultJson.results[0].cat_id;
+        const categoryId = match[1];
         console.log(`첫 번째 카테고리 ID: ${categoryId}`);
         
         // 2. 쇼핑인사이트 분야별 트렌드 테스트
