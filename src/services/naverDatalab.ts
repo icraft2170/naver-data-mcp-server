@@ -67,10 +67,7 @@ export const SearchTrendRequestSchema = z.object({
   timeUnit: z.enum(['date', 'week', 'month']),
   keywordGroups: z.array(z.object({
     groupName: z.string(),
-    keywords: z.array(z.string().min(1).max(5).refine(
-      (val) => val.length <= 5,
-      { message: "검색어는 최대 5자까지만 가능합니다." }
-    ))
+    keywords: z.array(z.string().min(1).max(5))
   })).min(1).max(5),
   device: z.enum(['pc', 'mo', '']).optional(),
   gender: z.enum(['f', 'm', '']).optional(),

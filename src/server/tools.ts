@@ -50,10 +50,10 @@ Parameters:
             keywordGroups: z.array(
                 z.object({
                     groupName: z.string().describe("Name of the keyword group"),
-                    keywords: z.array(z.string().min(1).max(5).refine(
-                        (val) => val.length <= 5,
-                        { message: "검색어는 최대 5자까지만 가능합니다." }
-                    )).describe("Array of keywords (max 20) to track in this group, each keyword must be 5 characters or less")
+                    keywords: z.array(z.string()
+                        .min(1)
+                        .max(5)
+                    ).describe("Array of keywords (max 20) to track in this group, each keyword must be 5 characters or less")
                 })
             ).min(1).max(5).describe("Array of keyword groups (max 5) to compare trends"),
             device: deviceSchema.describe("Device type filter: 'pc' for desktop, 'mo' for mobile, or empty for all"),
@@ -201,10 +201,6 @@ Note: Each keyword in the param array must be 5 characters or less. If a keyword
                         z.string()
                             .min(1)
                             .max(5)
-                            .refine(
-                                (val) => val.length <= 5,
-                                { message: "검색어는 최대 5자까지만 가능합니다." }
-                            )
                     ).describe("Array of keywords (max 5 characters per keyword) to track in this group")
                 })
             ).min(1).max(3).describe("Array of keyword groups (max 3) to compare trends"),
